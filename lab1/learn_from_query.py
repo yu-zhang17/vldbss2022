@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import statistics as stats
 import xgboost as xgb
+import pandas as pd
 
 
 def min_max_normalize(v, min_v, max_v):
@@ -20,6 +21,18 @@ def extract_features_from_query(range_query, table_stats, considered_cols):
     #           <-                   range features                    ->, <-     est features     ->
     feature = []
     # YOUR CODE HERE: extract features from query
+    for col in range_query.column_names():
+        if col in considered_cols:
+            min_val = table_stats.columns[col].min_val()
+            max_val = table_stats.columns[col].max_val()
+            (left, right) = range_query.column_range(col, min_val, max_val)
+            feature.append(left)
+            feature.append(right)
+    feature.append(stats.AVIEstimator.estimate(range_query, table_stats))
+    feature.append(stats.ExpBackoffEstimator.estimate(range_query, table_stats))
+    feature.append(stats.MinSelEstimator.estimate(range_query, table_stats))
+    # print("type_feature:")
+    # print(type(feature))
     return feature
 
 
@@ -33,15 +46,21 @@ def preprocess_queries(queris, table_stats, columns):
         feature, label = None, None
         # YOUR CODE HERE: transform (query, act_rows) to (feature, label)
         # Some functions like rq.ParsedRangeQuery.parse_range_query and extract_features_from_query may be helpful.
+        range_query = rq.ParsedRangeQuery.parse_range_query(query)
+        feature = extract_features_from_query(range_query, table_stats, columns)
+        label = act_rows
         features.append(feature)
         labels.append(label)
+    # print("type_features:")
+    # print(type(features))
+    # print(features)
     return features, labels
 
 
 class QueryDataset(torch.utils.data.Dataset):
     def __init__(self, queries, table_stats, columns):
         super().__init__()
-        self.query_data = list(zip(preprocess_queries(queries, table_stats, columns)))
+        self.query_data = list(zip(*preprocess_queries(queries, table_stats, columns)))
 
     def __getitem__(self, index):
         return self.query_data[index]
@@ -75,10 +94,26 @@ def est_xgb(train_data, test_data, table_stats, columns):
     train_x, train_y = preprocess_queries(train_data, table_stats, columns)
     train_est_rows, train_act_rows = [], []
     # YOUR CODE HERE: train procedure
+    # print(np.array(train_x).shape)
+    dtrain = xgb.DMatrix(pd.DataFrame(train_x), label=train_y)
+    params = {
+    'eta': 0.1,
+    'reg_alpha': 0.01,
+    'reg_lambda': 0.01,
+    'max_depth': 10
+    }
+
+    bst = xgb.train(params=params,dtrain=dtrain)
+
+    train_est_rows = bst.predict(dtrain).tolist()
+    train_act_rows = train_y
 
     test_x, test_y = preprocess_queries(test_data, table_stats, columns)
     test_est_rows, test_act_rows = [], []
     # YOUR CODE HERE: test procedure
+    dtest = xgb.DMatrix(pd.DataFrame(test_x), label=test_y)
+    test_est_rows = bst.predict(dtest).tolist()
+    test_act_rows = test_y
 
     return train_est_rows, train_act_rows, test_est_rows, test_act_rows
 
