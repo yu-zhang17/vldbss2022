@@ -5,6 +5,9 @@ from sklearn.cluster import KMeans
 import numpy as np
 from networkx import from_numpy_matrix, connected_components
 
+import sys
+sys.setrecursionlimit(2000)
+
 
 class Operation(Enum):
     CREATE_LEAF = 1
@@ -56,7 +59,16 @@ class LeafNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        pass
+        sel = 1.0
+        for col in range_query.column_names():
+            if col in self.col_names:
+                min_val = self.hist.min_val()
+                max_val = self.hist.max_val()
+                (left, right) = range_query.column_range(col, min_val, max_val)
+                col_cnt = self.hist.between_row_count(left, right, 0)
+                col_sel = col_cnt / self.scope.n_rows()
+                sel *= col_sel
+        return sel
 
     def debug_print(self, prefix, indent):
         print('%sLeafNode: %s, %s' % (prefix, self.scope, self.hist))
@@ -73,7 +85,12 @@ class SumNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        pass
+        l_num = self.lchild.scope.n_rows()
+        r_num = self.rchild.scope.n_rows()
+        l_estimate = self.lchild.estimate(range_query)
+        r_estimate = self.rchild.estimate(range_query)
+        return l_num / (l_num+r_num) * l_estimate + r_num / (l_num+r_num) * r_estimate
+        
 
     def debug_print(self, prefix, indent):
         print('%sSumNode: %s' % (prefix, self.scope))
@@ -92,7 +109,9 @@ class ProductNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        pass
+        l_estimate = self.lchild.estimate(range_query)
+        r_estimate = self.rchild.estimate(range_query)
+        return l_estimate * r_estimate
 
     def debug_print(self, prefix, indent):
         print('%sProductNode: %s' % (prefix, self.scope))
@@ -140,7 +159,37 @@ class SPN:
         It uses kmeans algorithm to split these rows.
         """
         # YOUR CODE HERE
-        pass
+        # assert (scope.n_rows() > 1)
+        # if scope.n_rows() < 100: 
+        #     print("ouch!!!!")
+        #     sys.exit()
+        #     return NodeScope([], []), NodeScope([], [])
+        np_array = SPN.construct_np_array(dataset, scope)
+        # print(scope.n_rows())
+        # print(np_array.shape)
+
+        km = KMeans(n_clusters=2, max_iter=10)
+        cluster = km.fit_predict(np_array)
+        # print(np_array.shape)
+        # print(cluster)
+        # l_rows = np_array[:,0]
+        # r_rows = np_array[:,1]
+        # if len(cluster.cluster_centers_) == 1: 
+        #     print("ouch!!!!")
+        #     sys.exit()
+        #     return NodeScope([], []), NodeScope([], [])
+        l_rows = []
+        r_rows = []
+        for i in range(scope.n_rows()):
+            row = scope.row_idxs[i]
+            if cluster[i] == 0:
+                l_rows.append(row)
+            else:
+                r_rows.append(row)
+        # if l_rows == [] or r_rows == []:
+        #     return NodeScope([], []), NodeScope([], [])
+        return NodeScope(l_rows, scope.col_idxs), NodeScope(r_rows, scope.col_idxs)
+
 
     @staticmethod
     def split_cols(dataset, scope, force):
@@ -188,7 +237,14 @@ class SPN:
         get_next_op returns the next operation to do when constructing a SPN.
         """
         # YOUR CODE HERE: return the next operation
-        pass
+        if scope.n_rows() >= row_batch_threshold:
+            return Operation.SPLIT_ROWS, False
+        elif scope.n_cols()>1 :#and split_col_failed == True:
+            return Operation.SPLIT_COLS, True
+        # elif scope.n_cols()>1 and split_col_failed == False:
+        #     return Operation.SPLIT_COLS, False
+        else:
+            return Operation.CREATE_LEAF, False
 
 
     @staticmethod
