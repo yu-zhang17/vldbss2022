@@ -62,7 +62,7 @@ if __name__ == '__main__':
     est_spn_sample_10000 = est_spn('./data/title_sample_10000.csv', test_data, table_stats)
     est_spn_sample_20000 = est_spn('./data/title_sample_20000.csv', test_data, table_stats)
 
-    _, _, est_mlp, _ = learn_from_query.est_mlp(train_data, test_data, table_stats, columns)
+    # _, _, est_mlp, _ = learn_from_query.est_mlp(train_data, test_data, table_stats, columns)
     _, _, est_xgb, _ = learn_from_query.est_xgb(train_data, test_data, table_stats, columns)
 
     gen_report(act, {
@@ -72,7 +72,7 @@ if __name__ == '__main__':
         "spn_sample_1000": est_spn_sample_1000,
         "spn_sample_10000": est_spn_sample_10000,
         "spn_sample_20000": est_spn_sample_20000,
-        "mlp": est_mlp,
+        # "mlp": est_mlp,
         "xgb": est_xgb,
     })
 

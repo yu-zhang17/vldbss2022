@@ -5,9 +5,6 @@ from sklearn.cluster import KMeans
 import numpy as np
 from networkx import from_numpy_matrix, connected_components
 
-import sys
-sys.setrecursionlimit(2000)
-
 
 class Operation(Enum):
     CREATE_LEAF = 1
@@ -159,35 +156,28 @@ class SPN:
         It uses kmeans algorithm to split these rows.
         """
         # YOUR CODE HERE
-        # assert (scope.n_rows() > 1)
-        # if scope.n_rows() < 100: 
-        #     print("ouch!!!!")
-        #     sys.exit()
-        #     return NodeScope([], []), NodeScope([], [])
-        np_array = SPN.construct_np_array(dataset, scope)
-        # print(scope.n_rows())
-        # print(np_array.shape)
-
-        km = KMeans(n_clusters=2, max_iter=10)
-        cluster = km.fit_predict(np_array)
-        # print(np_array.shape)
-        # print(cluster)
-        # l_rows = np_array[:,0]
-        # r_rows = np_array[:,1]
-        # if len(cluster.cluster_centers_) == 1: 
-        #     print("ouch!!!!")
-        #     sys.exit()
-        #     return NodeScope([], []), NodeScope([], [])
         l_rows = []
         r_rows = []
+
+        if scope.n_cols() == 1:
+            for i in range(scope.n_rows()):
+                row = scope.row_idxs[i]
+                if i < 50:
+                    l_rows.append(row)
+                else:
+                    r_rows.append(row)
+            return NodeScope(l_rows, scope.col_idxs), NodeScope(r_rows, scope.col_idxs)
+
+        np_array = SPN.construct_np_array(dataset, scope)
+        km = KMeans(n_clusters=2, max_iter=2)
+        cluster = km.fit_predict(np_array)
+
         for i in range(scope.n_rows()):
             row = scope.row_idxs[i]
             if cluster[i] == 0:
                 l_rows.append(row)
             else:
                 r_rows.append(row)
-        # if l_rows == [] or r_rows == []:
-        #     return NodeScope([], []), NodeScope([], [])
         return NodeScope(l_rows, scope.col_idxs), NodeScope(r_rows, scope.col_idxs)
 
 
@@ -237,6 +227,19 @@ class SPN:
         get_next_op returns the next operation to do when constructing a SPN.
         """
         # YOUR CODE HERE: return the next operation
+        if scope.n_cols() == 1:
+            if scope.n_rows() < row_batch_threshold:
+                return Operation.CREATE_LEAF, False
+            else:
+                return Operation.SPLIT_ROWS, False
+        elif split_col_failed == True:
+            return Operation.SPLIT_ROWS, False
+        elif scope.n_rows() < row_batch_threshold:
+            return Operation.SPLIT_COLS, True
+        else:
+            return Operation.SPLIT_COLS, False
+
+        """
         if scope.n_rows() >= row_batch_threshold:
             return Operation.SPLIT_ROWS, False
         elif scope.n_cols()>1 :#and split_col_failed == True:
@@ -245,6 +248,7 @@ class SPN:
         #     return Operation.SPLIT_COLS, False
         else:
             return Operation.CREATE_LEAF, False
+        """
 
 
     @staticmethod
