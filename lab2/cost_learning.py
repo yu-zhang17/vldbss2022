@@ -28,18 +28,54 @@ operators = ["Projection", "Selection", "Sort", "HashAgg", "HashJoin", "TableSca
 class PlanFeatureCollector:
     def __init__(self):
         # YOUR CODE HERE: define variables to collect features from plans
-        pass
+        self.nodes = 1
+        self.operators = [0,0,0,0,0,0,0,0,0,0]
+        self.estRows = [0,0,0,0,0,0,0,0,0,0]
 
     def add_operator(self, op: Operator):
         # YOUR CODE HERE: extract features from op
-        pass
+        self.nodes += 1
+        if op.is_projection():
+            self.operators[0] += 1
+            self.estRows[0] += op.est_row_counts()
+        elif op.is_selection():
+            self.operators[1] += 1
+            self.estRows[1] += op.est_row_counts()
+        elif op.is_sort():
+            self.operators[2] += 1
+            self.estRows[2] += op.est_row_counts()
+        elif op.is_hash_agg():
+            self.operators[3] += 1
+            self.estRows[3] += op.est_row_counts()
+        elif op.is_hash_join():
+            self.operators[4] += 1
+            self.estRows[4] += op.est_row_counts()
+        elif op.is_table_scan():
+            self.operators[5] += 1
+            self.estRows[5] += op.est_row_counts()
+        elif op.is_index_scan():
+            self.operators[6] += 1
+            self.estRows[6] += op.est_row_counts()
+        elif op.is_table_reader():
+            self.operators[7] += 1
+            self.estRows[7] += op.est_row_counts()
+        elif op.is_index_reader():
+            self.operators[8] += 1
+            self.estRows[8] += op.est_row_counts()
+        elif op.is_index_lookup():
+            self.operators[9] += 1
+            self.estRows[9] += op.est_row_counts()
+        else:        
+            print(operator.id)
+            assert (1 == 2)  # unknown operator
+
 
     def walk_operator_tree(self, op: Operator):
         self.add_operator(op)
         for child in op.children:
             self.walk_operator_tree(child)
         # YOUR CODE HERE: process and return the features
-        pass
+        return [self.nodes, operator in self.operators, estRow in self.estRows]
 
 
 class PlanDataset(torch.utils.data.Dataset):
@@ -66,6 +102,15 @@ class YourModel(nn.Module):
     def __init__(self):
         super().__init__()
         # YOUR CODE HERE
+        self.model = nn.Sequential(
+            nn.Linear(784, 200),
+            nn.ReLU(inplace=True),
+            nn.Linear(200, 200),
+            nn.ReLU(inplace=True),
+            nn.Linear(200, 10),
+            nn.ReLU(inplace=True)
+        )
+
 
     def forward(self, x):
         # YOUR CODE HERE
