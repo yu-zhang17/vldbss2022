@@ -21,6 +21,10 @@ def extract_features_from_query(range_query, table_stats, considered_cols):
     #           <-                   range features                    ->, <-     est features     ->
     feature = []
     # YOUR CODE HERE: extract features from query
+    '''
+    Huli hint !!!
+    this file is filled, miaomiao don't need to edit this file.
+    '''
     for col in range_query.column_names():
         if col in considered_cols:
             min_val = table_stats.columns[col].min_val()

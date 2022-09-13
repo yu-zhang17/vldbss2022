@@ -292,21 +292,19 @@ class ExpBackoffEstimator:
     @staticmethod
     def estimate(range_query, table_stats):
         # YOUR CODE HERE
-        sel = 1.0
-        sels = []
-        for col in range_query.column_names():
-            min_val = table_stats.columns[col].min_val()
-            max_val = table_stats.columns[col].max_val()
-            (left, right) = range_query.column_range(col, min_val, max_val)
-            col_cnt = table_stats.columns[col].between_row_count(left+1, right)  # (left, right) -> [left, right)
-            col_sel = col_cnt / table_stats.row_count
-            sels.append(col_sel)
-        sels.sort(reverse=True)
+        '''
+        Huli hint:
+        1. you need to store col_sel in a list of selective predicates
+        2. you can use sels.sort(reverse=True) to sort the list
+        
+        3. One common execute error is that there are less than 4 selective predicates.
+        So when calculte, use:
+
         for i in range(4):
             if i < len(sels):
                 sel *= sels[i] ** (1/(2**i))
-
-        return sel
+        '''
+        pass
 
 
 class MinSelEstimator:
@@ -316,12 +314,4 @@ class MinSelEstimator:
     @staticmethod
     def estimate(range_query, table_stats):
         # YOUR CODE HERE
-        sel = MAX_VAL
-        for col in range_query.column_names():
-            min_val = table_stats.columns[col].min_val()
-            max_val = table_stats.columns[col].max_val()
-            (left, right) = range_query.column_range(col, min_val, max_val)
-            col_cnt = table_stats.columns[col].between_row_count(left+1, right)  # (left, right) -> [left, right)
-            col_sel = col_cnt / table_stats.row_count
-            sel = min(sel, col_sel)
-        return sel
+        pass

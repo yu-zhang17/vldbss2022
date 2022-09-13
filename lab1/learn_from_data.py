@@ -56,16 +56,21 @@ class LeafNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        sel = 1.0
-        for col in range_query.column_names():
-            if col in self.col_names:
-                min_val = self.hist.min_val()
-                max_val = self.hist.max_val()
-                (left, right) = range_query.column_range(col, min_val, max_val)
-                col_cnt = self.hist.between_row_count(left, right, 0)
-                col_sel = col_cnt / self.scope.n_rows()
-                sel *= col_sel
-        return sel
+        '''
+        Huli hint:
+        Leaf nodes represent a few rows of a single column.
+        The estimate of LeafNode is the probability of selected rows in total rows.
+        selected rows / total rows
+        1. how to find this column in this query?
+            for col in query:
+                if col in self.cols
+        2. find column range in this query
+            column_range() function
+        3. find selected rows number in this range
+            between_row_count() function
+        4. total rows = self.scope.n_rows()
+        '''
+        pass
 
     def debug_print(self, prefix, indent):
         print('%sLeafNode: %s, %s' % (prefix, self.scope, self.hist))
@@ -82,12 +87,18 @@ class SumNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        l_num = self.lchild.scope.n_rows()
-        r_num = self.rchild.scope.n_rows()
-        l_estimate = self.lchild.estimate(range_query)
-        r_estimate = self.rchild.estimate(range_query)
-        return l_num / (l_num+r_num) * l_estimate + r_num / (l_num+r_num) * r_estimate
-        
+        '''
+        Huli hint:
+        Sum nodes split rows.
+        The estimate of SumNode is the weighted average of left and right child nodes
+        1. find the number of rows of left child
+            scope.n_rows()
+        2. find the number of rows of right child
+        3. get the estimate of left child
+        4. get the estimate of right child
+        5. estimate = left_estimate * left_num / total_num + right_estimae * right_num / total_num
+        '''
+        pass
 
     def debug_print(self, prefix, indent):
         print('%sSumNode: %s' % (prefix, self.scope))
@@ -106,9 +117,15 @@ class ProductNode():
 
     def estimate(self, range_query):
         # YOUR CODE HERE
-        l_estimate = self.lchild.estimate(range_query)
-        r_estimate = self.rchild.estimate(range_query)
-        return l_estimate * r_estimate
+        '''
+        Huli hint:
+        Product nodes split columns.
+        The estimate of ProductNode is the product of left and right child nodes
+        1. get the estimate of left child
+        2. get the estimate of right child
+        3. estimate = left_estimate * right_estimate
+        '''
+        pass
 
     def debug_print(self, prefix, indent):
         print('%sProductNode: %s' % (prefix, self.scope))
@@ -155,9 +172,10 @@ class SPN:
         split_rows splits these rows that specified by dataset and scope into two parts.
         It uses kmeans algorithm to split these rows.
         """
-        # YOUR CODE HERE
         l_rows = []
         r_rows = []
+
+        # example for simply process one column.
 
         if scope.n_cols() == 1:
             for i in range(scope.n_rows()):
@@ -168,18 +186,23 @@ class SPN:
                     r_rows.append(row)
             return NodeScope(l_rows, scope.col_idxs), NodeScope(r_rows, scope.col_idxs)
 
-        np_array = SPN.construct_np_array(dataset, scope)
-        km = KMeans(n_clusters=2, max_iter=2)
-        cluster = km.fit_predict(np_array)
+        else:
+            np_array = SPN.construct_np_array(dataset, scope)
+            km = KMeans(n_clusters=2, max_iter=2)
+            cluster = km.fit_predict(np_array)
 
-        for i in range(scope.n_rows()):
-            row = scope.row_idxs[i]
-            if cluster[i] == 0:
-                l_rows.append(row)
-            else:
-                r_rows.append(row)
-        return NodeScope(l_rows, scope.col_idxs), NodeScope(r_rows, scope.col_idxs)
-
+            # YOUR CODE HERE
+            '''
+            Huli Hint:
+                K-means clustering is already given for miaomiao.
+                Use the cluster result, it's classified with n=2.
+                if cluster[i] == 0:
+                    it is class 0
+                else:
+                    it is class 1
+            follow the n_cols = 1 example to split rows into l_rows and r_rows
+            '''
+            pass
 
     @staticmethod
     def split_cols(dataset, scope, force):
@@ -225,30 +248,22 @@ class SPN:
     def get_next_op(scope, row_batch_threshold, split_col_failed):
         """
         get_next_op returns the next operation to do when constructing a SPN.
+        
+        One simple strategy:
+        IF num(cols) == 1:
+            IF num(rows) < threshold:
+                CREATE_LEAF
+            ELSE:
+                SPLIT_ROWS
+        ELSE IF SPLIT_COLS failed last time:
+            SPLIT_ROWS
+        ELSE IF num(rows) < threshold:
+            SPLIT_COLS FORCIBLY
+        ELSE
+            SPLIT_COLS
         """
         # YOUR CODE HERE: return the next operation
-        if scope.n_cols() == 1:
-            if scope.n_rows() < row_batch_threshold:
-                return Operation.CREATE_LEAF, False
-            else:
-                return Operation.SPLIT_ROWS, False
-        elif split_col_failed == True:
-            return Operation.SPLIT_ROWS, False
-        elif scope.n_rows() < row_batch_threshold:
-            return Operation.SPLIT_COLS, True
-        else:
-            return Operation.SPLIT_COLS, False
-
-        """
-        if scope.n_rows() >= row_batch_threshold:
-            return Operation.SPLIT_ROWS, False
-        elif scope.n_cols()>1 :#and split_col_failed == True:
-            return Operation.SPLIT_COLS, True
-        # elif scope.n_cols()>1 and split_col_failed == False:
-        #     return Operation.SPLIT_COLS, False
-        else:
-            return Operation.CREATE_LEAF, False
-        """
+        pass
 
 
     @staticmethod
